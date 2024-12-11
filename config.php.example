@@ -1,0 +1,20 @@
+<?php
+return [
+    'db' => [
+        'host' => 'localhost',
+        'port' => 3306,
+        'database' => 'area',
+        'username' => 'area',
+        'password' => '123456',
+        'charset' => 'utf8mb4',
+        'table' => 'area'
+    ],
+    'api' => [
+        'key' => 'YOUR-KEY-HERE',
+        'retry' => 3,
+        'delay' => 200000 // 请求延迟（微秒）
+    ],
+    'memory' => [
+        'limit' => 256 // 内存限制（MB）
+    ]
+]; 
