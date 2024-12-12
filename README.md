@@ -1,6 +1,32 @@
 # 腾讯地图行政区划数据采集脚本
 
-本项目用于采集腾讯地图的省、市、区、街道四级行政区划数据，并将数据保存到MySQL数据库中。
+这是一个用于采集腾讯地图行政区划数据的 PHP 脚本。支持省、市、区、街道四级数据的采集，并包含断点续传功能。
+
+## 环境要求
+
+- PHP 7.0+
+- MySQL 5.6+
+- PHP PDO扩展
+- PHP mbstring扩展
+
+## 文件说明
+
+- `config.php.example`: 配置文件模板
+- `config.php`: 实际配置文件（需手动创建）
+- `area.sql`: 数据库表结构文件
+- `fetch_area.php`: 数据采集脚本
+- `area_log.txt`: 执行日志文件（自动生成）
+- `progress.json`: 断点续传进度文件（自动生成）
+
+## 功能特点
+
+- 支持四级行政区划数据采集（省/市/区/街道）
+- 自动处理直辖市的特殊逻辑
+- 支持断点续传，意外中断后可继续采集
+- 内存使用优化，支持大量数据采集
+- 错误重试机制，智能处理不同类型的错误
+- 详细的日志记录，实时显示处理进度
+- 自动监控和优化内存使用
 
 ## 数据结构
 
@@ -24,12 +50,12 @@
     └── ...
 ```
 
-## 环境要求
+## 安装说明
 
-- PHP 7.0+
-- MySQL 5.6+
-- PHP PDO扩展
-- PHP mbstring扩展
+1. 克隆或下载本项目
+2. 复制 `config.php.example` 为 `config.php`
+3. 修改 `config.php` 中的配置信息
+4. 导入 `area.sql` 创建数据表
 
 ## 配置说明
 
@@ -42,33 +68,26 @@ cp config.php.example config.php
 
 2. 修改配置文件 `config.php`：
 
-### 数据库配置
 ```php
-'db' => [
-    'host' => 'localhost',     // 数据库主机
-    'port' => 3306,           // 端口
-    'database' => 'area',     // 数据库名
-    'username' => 'area',     // 用户名
-    'password' => '123456',   // 密码
-    'charset' => 'utf8mb4',   // 字符集
-    'table' => 'area'         // 数据表名
-]
-```
-
-### API配置
-```php
-'api' => [
-    'key' => 'YOUR-KEY-HERE',  // 腾讯地图Key，必须修改
-    'retry' => 3,              // 请求失败重试次数
-    'delay' => 200000          // 请求间隔（微秒）
-]
-```
-
-### 内存配置
-```php
-'memory' => [
-    'limit' => 256            // 内存限制（MB）
-]
+return [
+    'db' => [
+        'host' => 'localhost',     // 数据库主机
+        'port' => 3306,           // 端口
+        'database' => 'area',     // 数据库名
+        'username' => 'area',     // 用户名
+        'password' => '123456',   // 密码
+        'charset' => 'utf8mb4',   // 字符集
+        'table' => 'area'         // 数据表名
+    ],
+    'api' => [
+        'key' => 'YOUR-KEY-HERE',  // 腾讯地图Key，必须修改
+        'retry' => 3,              // 请求失败重试次数
+        'delay' => 200000          // 请求间隔（微秒）
+    ],
+    'memory' => [
+        'limit' => 256            // 内存限制（MB）
+    ]
+];
 ```
 
 ### 配置项说明
@@ -88,24 +107,10 @@ cp config.php.example config.php
    - 检查API密钥是否已修改
    - 为可选配置项设置默认值
 
-## 文件说明
-
-- `config.php.example`: 配置文件模板
-- `config.php`: 实际配置文件（需手动创建）
-- `area.sql`: 数据库表结构文件
-- `fetch_area.php`: 数据采集脚本
-- `area_log.txt`: 执行日志文件（自动生成）
-- `progress.json`: 断点续传进度文件（自动生成）
-
 ## 使用方法
 
-1. 复制并修改配置文件：
-```bash
-cp config.php.example config.php
-# 修改 config.php 中的配置项，特别是腾讯地图API密钥
-```
-
-2. 创建数据库和用户
+1. 按照上述配置说明设置 config.php
+2. 创建数据库和用户：
 ```sql
 CREATE DATABASE area;
 GRANT ALL PRIVILEGES ON area.* TO 'area'@'localhost' IDENTIFIED BY '123456';
@@ -121,15 +126,6 @@ mysql -u area -p area < area.sql
 ```bash
 php fetch_area.php
 ```
-
-## 功能特性
-
-1. 四级数据结构：省/市/区/街道 完整的行政区划体系
-2. 直辖市处理：自动处理直辖市的特殊结构
-3. 断点续传：支持中断后从上次位置继续执行
-4. 智能错误处理：区分不同API错误类型，智能处理
-5. 路径显示：实时显示完整的行政区划路径
-6. 内存管理：自动监控和优化内存使用
 
 ## 错误处理机制
 
@@ -161,9 +157,13 @@ php fetch_area.php
 
 ## 注意事项
 
-1. 运行前清空数据表：
+1. 运行前清空数据：
 ```sql
+-- 清空数据表
 TRUNCATE TABLE area;  -- area 为配置文件中设置的表名
+
+-- 删除断点续传文件（如果存在）
+rm -f progress.json
 ```
 
 2. 查看执行日志：
@@ -171,19 +171,6 @@ TRUNCATE TABLE area;  -- area 为配置文件中设置的表名
 tail -f area_log.txt
 ```
 
-## License
-
-MIT License
-```
-
-这个README文件包含了：
-1. 项目说明
-2. 环境要求
-3. 配置信息
-4. 使用方法
-5. 数据结构说明
-6. 断点续传功能
-7. 注意事项
-8. 错误处理方法
-
-您可以根据实际需求调整或补充其中的内容。
+3. 重新采集数据时：
+   - 必须同时清空数据表和删除断点续传文件
+   - 否则可能导致数据不完整或重复

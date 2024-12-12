@@ -189,56 +189,57 @@ class AreaFetcher
         // 批量保存前检查内存
         $this->checkMemory();
 
-        // 先批量查询已存在的记录
-        $codes = array_column($items, 'id');
-        $placeholders = str_repeat('?,', count($codes) - 1) . '?';
         $table = $this->config['db']['table'];
-        $stmt = $this->pdo->prepare("SELECT id, code FROM {$table} WHERE code IN ($placeholders)");
-        $stmt->execute($codes);
-        $existingRecords = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-
         $insertedIds = [];
+        $currentTime = time();
+
         $this->pdo->beginTransaction();
         try {
-            $values = [];
-            $params = [];
-            $currentTime = time();
-            $index = 0;
-
             foreach ($items as $i => $item) {
-                if (isset($existingRecords[$item['id']])) {
-                    // 如果记录已存在，获取其ID
-                    $insertedIds[$item['id']] = $existingRecords[$item['id']];
-                    continue;
-                }
+                // 先查询是否存在
+                $stmt = $this->pdo->prepare("SELECT id FROM {$table} WHERE code = :code LIMIT 1");
+                $stmt->execute([':code' => $item['id']]);
+                $existingId = $stmt->fetchColumn();
 
-                $values[] = "(:pid{$index}, :code{$index}, :name{$index}, :sort{$index}, :create_time{$index}, :update_time{$index}, NULL)";
-                $params[":pid{$index}"] = $pid;
-                $params[":code{$index}"] = $item['id'];
-                $params[":name{$index}"] = $item['fullname'];
-                $params[":sort{$index}"] = $i + 1;
-                $params[":create_time{$index}"] = $currentTime;
-                $params[":update_time{$index}"] = $currentTime;
+                if ($existingId) {
+                    // 如果记录存在，更新记录
+                    $stmt = $this->pdo->prepare("UPDATE {$table} SET 
+                        pid = :pid,
+                        name = :name,
+                        sort = :sort,
+                        update_time = :update_time,
+                        delete_time = NULL
+                        WHERE code = :code");
+                    
+                    $stmt->execute([
+                        ':pid' => $pid,
+                        ':name' => $item['fullname'],
+                        ':sort' => $i + 1,
+                        ':update_time' => $currentTime,
+                        ':code' => $item['id']
+                    ]);
+                    
+                    $insertedIds[$item['id']] = $existingId;
+                } else {
+                    // 如果记录不存在，插入新记录
+                    $stmt = $this->pdo->prepare("INSERT INTO {$table} 
+                        (pid, code, name, sort, create_time, update_time, delete_time) 
+                        VALUES 
+                        (:pid, :code, :name, :sort, :create_time, :update_time, NULL)");
+
+                    $stmt->execute([
+                        ':pid' => $pid,
+                        ':code' => $item['id'],
+                        ':name' => $item['fullname'],
+                        ':sort' => $i + 1,
+                        ':create_time' => $currentTime,
+                        ':update_time' => $currentTime
+                    ]);
+                    
+                    $insertedIds[$item['id']] = $this->pdo->lastInsertId();
+                }
                 
                 $this->existingCodes[$item['id']] = true;
-                $index++;
-            }
-
-            if (!empty($values)) {
-                $sql = "INSERT INTO {$table} (pid, code, name, sort, create_time, update_time, delete_time) VALUES " . 
-                       implode(", ", $values) . 
-                       " ON DUPLICATE KEY UPDATE pid = VALUES(pid)";
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute($params);
-                
-                // 获取插入的记录的ID
-                foreach ($items as $item) {
-                    if (!isset($insertedIds[$item['id']])) {
-                        $stmt = $this->pdo->prepare("SELECT id FROM {$table} WHERE code = :code LIMIT 1");
-                        $stmt->execute([':code' => $item['id']]);
-                        $insertedIds[$item['id']] = $stmt->fetchColumn();
-                    }
-                }
             }
 
             $this->pdo->commit();
