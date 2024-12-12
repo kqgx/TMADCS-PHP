@@ -2,22 +2,6 @@
 
 这是一个用于采集腾讯地图行政区划数据的 PHP 脚本。支持省、市、区、街道四级数据的采集，并包含断点续传功能。
 
-## 环境要求
-
-- PHP 7.0+
-- MySQL 5.6+
-- PHP PDO扩展
-- PHP mbstring扩展
-
-## 文件说明
-
-- `config.php.example`: 配置文件模板
-- `config.php`: 实际配置文件（需手动创建）
-- `area.sql`: 数据库表结构文件
-- `fetch_area.php`: 数据采集脚本
-- `area_log.txt`: 执行日志文件（自动生成）
-- `progress.json`: 断点续传进度文件（自动生成）
-
 ## 功能特点
 
 - 支持四级行政区划数据采集（省/市/区/街道）
@@ -49,6 +33,22 @@
     │   └── ...
     └── ...
 ```
+
+## 环境要求
+
+- PHP 7.0+
+- MySQL 5.6+
+- PHP PDO扩展
+- PHP mbstring扩展
+
+## 文件说明
+
+- `config.php.example`: 配置文件模板
+- `config.php`: 实际配置文件（需手动创建）
+- `area.sql`: 数据库表结构文件
+- `fetch_area.php`: 数据采集脚本
+- `area_log.txt`: 执行日志文件（自动生成）
+- `progress.json`: 断点续传进度文件（自动生成）
 
 ## 安装说明
 
